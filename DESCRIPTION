@@ -1,0 +1,17 @@
+Package: ZIDM
+Type: Package
+Title: ZIDM: A Bayesian Zero-Inflated Dirichlet-Multinomial Regression Model for Multivariate Compositional Count Data 
+Version: 1.0
+Date: 2022-02-28
+Author: Fill when published
+Maintainer: Fill when published <FillWhenPublished@gmail.com>
+Description: MCMC samplers for DM, DMbvs, ZIDM, ZIDMbvs, and Tuyl's approach for estimating and performing variable 
+  selection with zero-inflated multivariate count data
+License: MIT + file LICENSE
+Imports: Rcpp (>= 1.0.7), RcppArmadillo (>= 0.9.200.5.0), ggplot2 (>= 2.2.1), mvtnorm (>= 1.0-8), MCMCpack (>= 1.4-4) 
+LinkingTo: Rcpp, RcppArmadillo
+Suggests: knitr, rmarkdown, RefManageR
+Depends: 
+    R (>= 2.10)
+LazyData: true
+VignetteBuilder: knitr
