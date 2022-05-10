@@ -15,6 +15,6 @@ devtools
 Then to install the ZIDM package, simply run 
 
 library(devtools)
-install_github( "<Fill when published>/ZIDM", build_vignettes = TRUE)
+install_github( "mkoslovsky/ZIDM" )
 
 in the R console or install directly from the source code in Supplementary Material.
