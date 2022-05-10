@@ -3,8 +3,8 @@ Type: Package
 Title: ZIDM: A Bayesian Zero-Inflated Dirichlet-Multinomial Regression Model for Multivariate Compositional Count Data 
 Version: 1.0
 Date: 2022-02-28
-Author: Fill when published
-Maintainer: Fill when published <FillWhenPublished@gmail.com>
+Author: Matt Koslovsky
+Maintainer: Matt Koslovsky <mkoslovsky12@gmail.com>
 Description: MCMC samplers for DM, DMbvs, ZIDM, ZIDMbvs, and Tuyl's approach for estimating and performing variable 
   selection with zero-inflated multivariate count data
 License: MIT + file LICENSE
