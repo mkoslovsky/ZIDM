@@ -1,0 +1,20 @@
+In this folder you'll find code for the R package ZIDM found in:
+
+“A Bayesian Zero-Inflated Dirichlet-Multinomial Regression Model for Multivariate Compositional Count Data” by <Fill when published>
+
+The main functions operate in C++ via the R package Rcpp. These functions can be sourced by a set of wrapper functions that enable easy implementation of the code in the R environment. Various functions are available that produce and summarize the results for inference.  
+
+This package relies on various R packages that need to be installed in the R environment before running. To install, use the install.packages(‘’) command for the following packages:
+Rcpp 
+RcppArmadillo  
+MCMCpack
+mvtnorm 
+ggplot2
+devtools  
+
+Then to install the ZIDM package, simply run 
+
+library(devtools)
+install_github( "<Fill when published>/ZIDM", build_vignettes = TRUE)
+
+in the R console or install directly from the source code in Supplementary Material.

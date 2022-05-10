@@ -1,0 +1,262 @@
+---
+title: "ZIDM-vignette"
+output: rmarkdown::pdf_document
+author: <Fill when published>
+vignette: >
+  %\VignetteIndexEntry{ZIDM-vignette}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+references:
+ 
+  
+  
+- id: wadsworth2017integrative
+  title: An integrative Bayesian Dirichlet-multinomial regression model for the analysis of taxonomic abundances in microbiome data
+  author:
+  - family: Wadsworth
+    given: Duncan
+  - family: Argiento
+    given: Raffaele
+  - family: Guindani
+    given: Michele
+  - family: Galloway-Pena
+    given: Jessica
+  - family: Shelburne
+    given: Samuel A
+  - family: Vannucci
+    given: Marina 
+  container-title: BMC Bioinformatics
+  volume: 18
+  issue: 1
+  publisher: BioMed Central
+  page: 94
+  type: article-journal
+  issued:
+  year: 2017 
+- id: tuyls
+  title: 'A Method to Handle Zero Counts in the Multinomial Model'
+  author:
+  - family: Tuyl
+    given: Frank
+  container-title:  The American Statistician
+  type: article-journal
+  issued:
+    year: '2019'    
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+ 
+# Introduction 
+In this vignette, we provide worked examples on simulated data and the gut microbiome data set analyzed in the main manuscript, `A Bayesian Zero-Inflated Dirichlet-Multinomial Regression Model for Multivariate Compositional Count Data`, to demonstrate how to apply the proposed  methods. Specifically, the software contains functionality to implement the proposed zero-inflated Dirichlet-multinomial (ZIDM) model, a standard Dirichlet-multinomial (DM) model, and their extensions to sparsity-induced regression settings, ZIDMbvs and DMbvs (@wadsworth2017integrative 2017), respectively. Additionally, we provide functionality to implement the approach of @tuyls for individual-level count probability estimation and a supplementary Monte Carlo sampler for uncertainty estimation. 
+
+# Data Simualtion 
+
+In this section, we first describe how to simulate data investigated in the accompanying manuscript's simulation and sensitivity studies. Having installed and loaded the `ZIDM` package into the R environment (See README for instructions), generate a simulated data set for a zero-inflated Dirichlet-multinomial model using the `simulate_ZIDM()` function. 
+
+
+```{r setup, message = FALSE, warning = FALSE, results = "hide" }
+library(ZIDM)
+```
+
+```{r,message = FALSE, warning = FALSE, results = "hide" }
+data_ZIDM <- simulate_ZIDM( rho = 0.3, rho_theta = 0.3)
+```
+
+By default 50 subjects (`n_obs = 50`) with 100 taxa (`n_taxa = 100`) and 50 covariates in both levels of the model (`n_vars = 50` and `n_vars_theta = 50`) are simulated. The function requires specification of `rho` (`rho_theta`) or `Sigma` (`Sigma_theta`), where `rho` sets the covariance matrix between simulated covariates as $\Sigma_{ij} = \rho^{|i-j|}$ and `Sigma` is simply a given covariance matrix. Of the $50 \times 100$ potential covariate-compositional element associations, $4$ of the covariates are associated with $4$ of the simulated compositional elements and the zero-inflation indicators, totally 32 active terms across both levels of the model. The total number of counts for each observation is sampled from a Uniform(400,500), where the minimum and maximum values can be adjusted with `n_reads_min` and `n_reads_max`, respectively. Additional arguments are available to control the number of compositional elements with active covariates (`n_relevant_taxa` and `n_relevant_taxa_theta`), the number of active covariates (`n_relevant_vars` and `n_relevant_vars_theta`),  minimum (`beta_min` and `beta_min_theta`) and maximum (`beta_max` and `beta_max_theta`) true regression coefficients, signal-to-noise ratio (`signoise`), minimum (`int_zero_min`) and maximum (`int_zero_max`) values for intercept terms $\beta_{\theta 0 }$ to control the proportion of at-risk zeros, and the dispersion factor (`theta0`). 
+
+In addition to the simulated data, the `simulate_ZIDM()` function also returns the true regression coefficients $\boldsymbol{\beta}_\theta$ (`betas_theta`), $\boldsymbol{\beta}_\gamma$ (`betas`), zero-inflation indicators (`eta`),  probabilities used to simulate the zero-inflation indicators (`prob`), probabilities used to simulated the multivariate count data (`beta_0`), and dispersion parameter (`theta0`).
+                                                 
+# Parameter Estimation 
+
+First we demonstrate how to use the proposed ZIDM model for estimation of the population-level zero-inflation probabilities, population-level count probabilities, and individual-level count probabilities. Using the proposed model's notation, these quantities are $\Theta_j = 1/(1+\exp(\beta_{\theta j0}))$ (`post_theta`), $\Gamma_j = \exp(\beta_{\gamma j0})/(\sum_{j=1}^J\exp(\beta_{\gamma j0}))$ (`post_gamma`), and $\psi_{ij} = c_{ij}/T_i$ (`post_psi`) for all $i=1,\dots,N$ and $j=1,\dots,J$, respectively. Note that this approach ignores potential covariates' influence in both levels of the model. By default, the method provides 95\% credible intervals for each of the estimated parameters (`post_theta_lower`,  `post_theta_upper`, `post_gamma_lower`, `post_gamma_upper`, `post_psi_lower`, `post_psi_upper`). By default `ZIDM_R` runs $10000$ MCMC iterations, thins to every $10^{th}$ iteration, and assumes $\sigma_{\beta_\gamma} = \sigma_{\beta_\theta} = \sqrt{5}$.
+
+
+```{r, eval = F, include = T   }
+# Fit the ZIDM model to the data
+fit_ZIDM <- ZIDM_R( data_ZIDM$Z )
+
+# Obtain estimates from ZIDM
+ZIDM_est <- estimates_ZIDM( zidm_obj = fit_ZIDM, burnin = 500, CI = 0.95  )
+```
+
+```{r , eval = F, include = F }
+ true_beta_theta <- 1/(1 + exp( data_ZIDM$betas_theta[ , 1 ]))
+ diff_theta <- ZIDM_est$post_theta - true_beta_theta
+frob_theta <- sqrt( sum( diff_theta^2 ) ) 
+ 
+ true_prop <- exp(data_ZIDM$betas[ , 1 ])/sum( exp( data_ZIDM$betas[ , 1 ] ) )
+ diff_prop <- ZIDM_est$post_gamma - true_prop
+ frob_prop <- sqrt( sum( diff_prop^2 ) ) 
+ 
+ true_ind_prop <- data_ZIDM$beta_0
+ diff_cc <- ZIDM_est$post_psi- true_ind_prop
+ frob_cc <- sqrt( sum( diff_cc^2 ) )
+```
+ 
+Compared to the truth, we find the model obtained a Frobenious norm of 1.31, 0.04, and 0.70 for $\Theta_j$, $\Gamma_j$, and $\psi_{ij}$, respectively.
+ 
+In addition, we provide functionality to estimate $\Gamma_j = \exp(\beta_{\gamma j0})/(\sum_{j=1}^J\exp(\beta_{\gamma j0}))$ and $\psi_{ij} = c_{ij}/T_i$ with a Bayesian DM model, as well as $\psi_{ij}$ with Tuyl's approach. Note that we constructed a Monte Carlo sampling algorithm to obtain uncertainty estimates using Tuyl's approach. Estimates from the DM model are obtained with `estimates_DM()`.
+
+```{r, eval = F, include = T      }
+# Fit the DM model to the data
+fit_DM <- DM_R( data_ZIDM$Z )
+
+# Obtain estimates of DM model
+DM_est <- estimates_DM( dm_obj = fit_DM, burnin = 500, CI = 0.95  )
+
+# Fit Tuyl's approach to the data and obtain uncertainty estimates via Monte Carlo sampling
+fit_tuyl <- tuyl_meaner( data_ZIDM$Z ) 
+uncertainty_tuyl <- tuyl( 40000 , data_ZIDM$Z )
+```
+ 
+```{r , eval = F, include = F } 
+ true_prop <- exp(data_ZIDM$betas[ , 1 ])/sum( exp( data_ZIDM$betas[ , 1 ] ) )
+ diff_prop <- DM_est$post_gamma - true_prop
+ frob_prop <- sqrt( sum( diff_prop^2 ) ) 
+ 
+ true_ind_prop <- data_ZIDM$beta_0
+ diff_cc <- DM_est$post_psi- true_ind_prop
+ frob_cc <- sqrt( sum( diff_cc^2 ) )
+ 
+ diff_cc_tuyl <- fit_tuyl - true_ind_prop
+ frob_cc_tuyl <- sqrt( sum( diff_cc_tuyl^2 ) )
+ 
+``` 
+ 
+ 
+Compared to the truth, we find the DM model obtained a Frobenious norm of 0.08 and 0.72 for $\Gamma_j$ and $\psi_{ij}$, respectively, and Tuyl's approach obtained a Frobenius norm of 0.71 for $\psi_{ij}$. 
+
+ 
+# Variable Selection  
+
+Next, we demonstrate how to use our approach to identify covariates associated with zero-inflation and compositional counts. The `ZIDMbvs_R()` function requires a matrix of counts and covariates for both levels of the model (`X` and `X_theta`). Note, `X` and `X_theta` do not have to be the same, and the function automaticially includes intercept terms. By default the model is run for $10000$ iterations, thinning to every $10^{th}$ iteration. We assume $\sigma_{\beta_\gamma} = \sigma_{\beta_\theta} = \sqrt{5}$ and noninformative prior probabilities of inclusion (i.e.,  $a_\varphi = b_\varphi = a_\zeta = b_\zeta = 1$). The output of the model contains MCMC samples for $\varphi$, $\beta_\gamma$, $\eta$, $\beta_\theta$, $\zeta$, $\omega$, $c$, and the acceptance probability of $\eta$ (`eta_accept`). 
+
+```{r, eval = F, include = T }
+fit_ZIDMbvs <-  ZIDMbvs_R( Z = data_ZIDM$Z, X = data_ZIDM$X[,-1], X_theta = data_ZIDM$X_theta[,-1]  )
+```
+ 
+Inclusion is determined with the marginal posterior probability of inclusion (MPPI) for each compositional element-by-covariate inclusion indicator. By default, the MPPI threshold for significant terms is set to $0.50$. To obtain MPPIs for both levels of the model from the `ZIDMbvs_R` output, run
+
+```{r, eval = T, include = T   }
+MPPI_zeta <- apply( fit_ZIDMbvs$zeta[ ,, 501:1000 ], c(1,2), mean )
+MPPI_varphi <- apply( fit_ZIDMbvs$varphi[ ,, 501:1000 ], c(1,2), mean )
+```
+
+The selection performance of the model is evaluated using the `select_perf()` function which calculates the sensitivity, specificity, Matthew's correlation coefficient (MCC), as well as the F1 score (as defined in the main manuscript). To obtain these results, simply supply the selected terms and true active terms. For example in this analysis, we obtained a 0.75 sensitivity, 0.96 specificity, 0.20 MCC, and 0.11 F1 for the associations between the compositional count and covariates. 
+
+```{r, eval = T, include = T   }
+# Selection performance for covariates associated with zero-inflation indicators using ZIDMbvs
+select_perf_zeta <- select_perf( selected = (MPPI_zeta[ , -1 ] > 0.5)*1, 
+                                 truth =  (data_ZIDM$betas_theta[ , -1 ] != 0 )*1 )
+# Selection performance for covariates associated with compositional counts using ZIDMbvs
+select_perf_varphi <- select_perf( selected = (MPPI_varphi[ , -1 ] > 0.5)*1, 
+                                 truth =  (data_ZIDM$betas[ , -1 ] != 0 )*1 )
+
+select_perf_varphi$sens
+select_perf_varphi$spec
+select_perf_varphi$mcc
+select_perf_varphi$f1
+```
+
+Additionally, users can implement the DMbvs method of @wadsworth2017integrative (2017) using the following code:
+```{r, eval = F, include = T }
+fit_DMbvs <-  DMbvs_R( Z = data_ZIDM$Z, X = data_ZIDM$X[,-1])
+```
+
+The model has similar default settings at `ZIDMbvs_R`, where applicable. The selection performance of the `DMbvs` model is calculated as
+
+```{r, eval = T, include = T   }
+# Selection performance for covariates associated with compositional counts using DMbvs
+MPPI_varphi_DM <- apply( fit_DMbvs$varphi[ ,, 501:1000 ], c(1,2), mean )
+select_perf_varphi_DM <- select_perf( selected = (MPPI_varphi_DM[ , -1 ] > 0.5)*1, 
+                                      truth =  (data_ZIDM$betas[ , -1 ] != 0 )*1 )
+
+select_perf_varphi_DM$sens
+select_perf_varphi_DM$spec
+select_perf_varphi_DM$mcc
+select_perf_varphi_DM$f1
+```
+
+Here, we see how the ZIDMbvs greatly outperforms the DMbvs approach in the presence of zero-inflation. 
+
+# Application Study
+
+In this section, we demonstrate how to apply the proposed ZIDMbvs method to the data investigated in the application study in the main manuscript. First, load the data into the working environment
+
+```{r}
+data("Gut_dietary")
+data("Gut_micro") 
+```
+
+The `Gut_micro` data set contains 28 taxa count reads for 98 participants and the `Gut_dietary` data set contains their corresponding 97 dietary covariates. To investigate these data, simply run:
+
+```{r, eval = F}
+
+fit_gut <-  ZIDMbvs_R( Z = Gut_micro, X = Gut_dietary, X_theta = Gut_dietary )
+
+```
+
+To demonstrate the convergence of the algorithm, we plot the number of active terms in the model over MCMC iterations
+
+```{r, eval = T, include = F }
+library(ggplot2)
+y <- apply( fit_gut$model$zeta, 3, sum)
+x <- 1:length( y )
+dat <- data.frame( x, y )
+conv1 <-  ggplot(dat, aes(x, y)) + geom_line(aes(x=x, y=y)) + labs(x = "MCMC Sample", y = "Count",  title = " At-Risk Indicator Active Terms") + theme( title =element_text(size=10) )
+
+y <- apply( fit_gut$model$varphi, 3, sum)
+x <- 1:length( y )
+dat <- data.frame( x, y )
+conv2 <-  ggplot(dat, aes(x, y)) + geom_line(aes(x=x, y=y)) + labs(x = "MCMC Sample", y = "Count",  title = "Compositional Count Active Terms")+ theme( title =element_text(size=10 ) )
+ 
+```
+
+```{r, figures-sidea, fig.show="hold", echo = F ,fig.height = 3, fig.width = 3.25}
+par(mar = c(5, 5, .1, .1))
+print(conv1)
+print(conv2)
+```
+ 
+
+The plots of the corresponding MPPIs for both levels of the model are presented below. The horizontal dotted line indicates the selection threshold. Covariates with corresponding MPPIs above 0.50 are considered active in the model.
+
+```{r, eval = T, include = F}
+
+MPPI_varphi <- apply( fit_gut$model$varphi[ ,, 501:1000 ], c(1,2), mean )
+MPPI_zeta <- apply( fit_gut$model$varphi[ ,, 501:1000 ], c(1,2), mean ) 
+y <- c(MPPI_zeta[,-1])
+x <- seq(1, length(y))
+data <- data.frame(cbind(y, x))
+
+
+aa <- ggplot(data, aes(x, y)) + geom_segment(aes(xend = x, 
+                                                 yend = 0), size = 0.2, lineend = "butt") + labs(x = "Covariate Index", 
+                                                                                                 y = "MPPI", title = " At-Risk Indicator Associations") + geom_abline(slope = 0, intercept = 0.5, linetype = "dashed") + theme( title =element_text(size=8 ) )
+
+yb <- c(MPPI_varphi[,-1])
+xb <- seq(1, length(yb))
+datab <- data.frame(cbind(yb, xb))
+
+bb <- ggplot(datab, aes(xb, yb)) + geom_segment(aes(xend = xb, 
+                                                 yend = 0), size = 0.2, lineend = "butt") + labs(x = "Covariate Index", 
+                                                                                                 y = "MPPI", title = "Compositional Count Associations") + geom_abline(slope = 0, intercept = 0.5, linetype = "dashed") + theme( title =element_text(size=9 ) )
+
+```
+
+```{r, figures-sideb, fig.show="hold", echo = F ,fig.height = 3, fig.width = 3.25}
+par(mar = c(4, 4, .1, .1))
+print(aa)
+print(bb)
+```
+ 
+
+# References
+
