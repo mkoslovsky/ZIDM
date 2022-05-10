@@ -1,6 +1,6 @@
 In this folder you'll find code for the R package ZIDM found in:
 
-“A Bayesian Zero-Inflated Dirichlet-Multinomial Regression Model for Multivariate Compositional Count Data” by <Fill when published>
+“A Bayesian Zero-Inflated Dirichlet-Multinomial Regression Model for Multivariate Compositional Count Data” by Matt Koslovsky
 
 The main functions operate in C++ via the R package Rcpp. These functions can be sourced by a set of wrapper functions that enable easy implementation of the code in the R environment. Various functions are available that produce and summarize the results for inference.  
 
