@@ -514,8 +514,8 @@ arma::mat cc_update_cpp( arma::mat z, arma::mat loggamma, arma::vec uu, arma::ma
     for( int j = 0; j < J; ++j ){
       if( eta( n, j ) == 1 ){ 
         cc( n, j ) = rgamma( 1, z( n, j ) + exp(loggamma( n, j ) ), 1/( uu[ n ] + 1 )  )[ 0 ]; 
-        if( cc( n, j ) < pow(10.0, -100.0)){
-          cc( n, j ) = pow(10.0, -100.0);
+        if( cc( n, j ) < pow(10,-100)){
+          cc( n, j ) = pow(10,-100);
         }
       }
     }
@@ -858,6 +858,42 @@ double Ezero( double B, double zeta, double n, double w ){
   double val = ( 1 - w/zeta )/( n + B - w )*w_x( B, w, zeta, n ); 
   return val;
   }
+
+arma::mat rescaled( arma::mat beta_gamma){
+  double sum_beta_gamma_0 = 0;
+  int B = beta_gamma.n_rows; 
+  int P = beta_gamma.n_cols; 
+  arma::mat beta_gamma_hold( B, P );
+  beta_gamma_hold = beta_gamma;
+  
+  for( int b = 0; b < B; ++b ){
+    sum_beta_gamma_0 += abs( beta_gamma( b, 0 ) );
+  }
+  
+  for( int b = 0; b < B; ++b ){
+    beta_gamma_hold( b, 0 ) = beta_gamma( b, 0 )/sum_beta_gamma_0;
+  }
+ 
+  
+  return beta_gamma_hold;
+}
+
+arma::mat rescaled2( arma::mat cc){
+
+  int B = cc.n_cols; 
+  int N = cc.n_rows;  
+  arma::mat cc_hold( N, B );
+  cc_hold.zeros(); 
+  
+  for( int i = 0; i < N; ++i ){
+    double T_n = sum( cc.row( i ) );
+     for( int b = 0; b < B; ++b ){
+      cc_hold( i, b ) = cc( i, b )/T_n;
+    }
+  }
+  
+  return cc_hold;
+}
  
  
 } // For namespace 'help'
@@ -940,7 +976,8 @@ List zidm_bvs(
     
         // Update cc within
        temp_cc = help::cc_update_cpp( z, temp_loggamma, temp_uu, temp_eta );
- 
+       
+
     // Update uu
        temp_uu = help::uu_update_cpp( z, temp_cc ); 
  
@@ -960,6 +997,13 @@ List zidm_bvs(
        between_beta_theta_zeta = help::between_beta_theta_zeta_update_BB_cpp( x_theta, temp_zeta, temp_beta_theta, temp_eta, sigma2_beta_theta, a_zeta, b_zeta );
        temp_zeta = as<arma::mat>( between_beta_theta_zeta[ 0 ] );
        temp_beta_theta = as<arma::mat>( between_beta_theta_zeta[ 1 ] );
+       
+       // Rescale beta gamma
+       //temp_beta_gamma = help::rescaled( temp_beta_gamma );
+       
+       // Rescalecc
+       //temp_cc = help::rescaled2( temp_cc );
+       
 
     // Set the starting values for the next iteration
     if( (iter + 1) % thin == 0 ){ 
