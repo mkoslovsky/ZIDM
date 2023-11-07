@@ -62,7 +62,13 @@ In this section, we first describe how to simulate data investigated in the acco
 
 
 ```{r setup, message = FALSE, warning = FALSE, results = "hide" }
-library(ZIDM)
+library(ZIDM) 
+```
+
+```{r,message = FALSE, warning = FALSE, results = "hide", include = F }
+load("fit_ZIDMbvs.rda")
+load("fit_DMbvs.rda")
+load("fit_gut.rda")
 ```
 
 ```{r,message = FALSE, warning = FALSE, results = "hide" }
@@ -89,7 +95,7 @@ ZIDM_est <- estimates_ZIDM( zidm_obj = fit_ZIDM, burnin = 500, CI = 0.95  )
 ```{r , eval = F, include = F }
  true_beta_theta <- 1/(1 + exp( data_ZIDM$betas_theta[ , 1 ]))
  diff_theta <- ZIDM_est$post_theta - true_beta_theta
-frob_theta <- sqrt( sum( diff_theta^2 ) ) 
+ frob_theta <- sqrt( sum( diff_theta^2 ) ) 
  
  true_prop <- exp(data_ZIDM$betas[ , 1 ])/sum( exp( data_ZIDM$betas[ , 1 ] ) )
  diff_prop <- ZIDM_est$post_gamma - true_prop
@@ -138,13 +144,15 @@ Compared to the truth, we find the DM model obtained a Frobenious norm of 0.08 a
 
 Next, we demonstrate how to use our approach to identify covariates associated with zero-inflation and compositional counts. The `ZIDMbvs_R()` function requires a matrix of counts and covariates for both levels of the model (`X` and `X_theta`). Note, `X` and `X_theta` do not have to be the same, and the function automaticially includes intercept terms. By default the model is run for $10000$ iterations, thinning to every $10^{th}$ iteration. We assume $\sigma_{\beta_\gamma} = \sigma_{\beta_\theta} = \sqrt{5}$ and noninformative prior probabilities of inclusion (i.e.,  $a_\varphi = b_\varphi = a_\zeta = b_\zeta = 1$). The output of the model contains MCMC samples for $\varphi$, $\beta_\gamma$, $\eta$, $\beta_\theta$, $\zeta$, $\omega$, $c$, and the acceptance probability of $\eta$ (`eta_accept`). 
 
+ 
+
 ```{r, eval = F, include = T }
 fit_ZIDMbvs <-  ZIDMbvs_R( Z = data_ZIDM$Z, X = data_ZIDM$X[,-1], X_theta = data_ZIDM$X_theta[,-1]  )
 ```
  
 Inclusion is determined with the marginal posterior probability of inclusion (MPPI) for each compositional element-by-covariate inclusion indicator. By default, the MPPI threshold for significant terms is set to $0.50$. To obtain MPPIs for both levels of the model from the `ZIDMbvs_R` output, run
-
-```{r, eval = T, include = T   }
+ 
+```{r, eval = T, include = T   }  
 MPPI_zeta <- apply( fit_ZIDMbvs$zeta[ ,, 501:1000 ], c(1,2), mean )
 MPPI_varphi <- apply( fit_ZIDMbvs$varphi[ ,, 501:1000 ], c(1,2), mean )
 ```
@@ -231,7 +239,7 @@ The plots of the corresponding MPPIs for both levels of the model are presented 
 ```{r, eval = T, include = F}
 
 MPPI_varphi <- apply( fit_gut$model$varphi[ ,, 501:1000 ], c(1,2), mean )
-MPPI_zeta <- apply( fit_gut$model$varphi[ ,, 501:1000 ], c(1,2), mean ) 
+MPPI_zeta <- apply( fit_gut$model$zeta[ ,, 501:1000 ], c(1,2), mean ) 
 y <- c(MPPI_zeta[,-1])
 x <- seq(1, length(y))
 data <- data.frame(cbind(y, x))
